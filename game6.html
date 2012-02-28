@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Classic Bricks Game</title>
+		<style type="text/css">
+			#board
+			{				
+				float:left;
+				outline:black solid thin;
+			}
+		</style>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function(){
+				initialScreen();
+				$(document).keydown(onKeyDown);
+				$(document).keyup(onKeyUp);			
+			});
+		</script>
+	</head>
+	<body>
+		<div id="container">
+			<canvas id="board" height="300" width="700">
+				Your browser does not support HTML5 canvas
+			</canvas>
+		</div>
+	</body>
+	<script type="text/javascript">
+		var canvas,context;
+		var ballx,bally;
+		var xunits=0;
+		var yunits=0;
+		var radians=0;
+		var speed=5;
+		var angle=35;
+
+		var rectWidth=500;
+		var gameLevel=1;
+		var moveRight,moveLeft;
+
+		const BARHEIGHT=10;
+		const BARWIDTH=120;
+
+		const RADIUS=15;
+		
+		const BRICKROWS=5;
+		const BRICKCOLUMNS=5;
+		const BRICKHEIGHT=20;
+		const BRICKWIDTH=100;
+		//const NUMBEROFBRICKS=50;
+		
+		var gameScore=0;
+		var barx,bary;
+		var gameOver=false;
+
+		var bricks=new Array();
+		var colorCodes=new Array();
+
+		function initialScreen()
+		{
+			canvas=document.getElementById("board");
+			context=canvas.getContext("2d");
+			
+			initColor();
+			//starting positions of the ball and the bar
+			ballx=rectWidth/2;
+			bally=canvas.height-30;	
+			
+			barx=rectWidth/2-60;
+			bary=canvas.height-10;
+			
+			drawBricks();
+						
+			drawGame();
+
+			updateBall();
+			
+			setInterval(drawGame, 33);
+			
+		}		
+		
+		function initColor()
+		{
+			var col,score;
+			
+			col='violet';
+			score=25;
+			colorCodes.push({color:col,points:score});
+			col='blue';
+			score-=5;
+			colorCodes.push({color:col,points:score});
+			col='green';
+			score-=5;
+			colorCodes.push({color:col,points:score});
+			col='yellow';
+			score-=5;
+			colorCodes.push({color:col,points:score});
+			col='#8E2323';
+			score-=5;
+			colorCodes.push({color:col,points:score});
+		}
+		
+		function displayStatus()
+		{	
+			context.clearRect(500,0,canvas.width,canvas.height);
+			context.font = "bold 24px sans-serif";
+			context.fillStyle="black";
+			context.fillText("Score",550,50);
+			context.fillText(gameScore,550,100);
+			context.fillText("Level",550,200);
+			context.fillText(gameLevel,550,250);
+			if(gameScore==375)
+			{
+				nextLevel();
+			}
+		}
+
+		function nextLevel()
+		{
+			/* for(var i=0;i<5;i++)
+			{	
+				colorCodes[i].points+=5;	
+			}
+			gameLevel++;
+
+			context.clearRect(500,0,canvas.width,canvas.height);
+			context.font = "bold 24px sans-serif";
+			context.fillStyle="black";		
+			context.fillText("Level Up!!",rectWidth/2,canvas.height/2);
+			
+			speed++;
+				
+			ballx=rectWidth/2;
+			bally=canvas.height-30;	*/
+					
+			//drawBricks();
+
+			//drawGame();
+			
+			//updateBall();
+			initialScreen();
+		}
+
+		function drawGame()
+		{
+			if(!gameOver)
+			{
+				//clear the earlier drawing
+				context.clearRect(0, 0, rectWidth, canvas.height);
+			
+				//draw the ball	
+				ballx+=xunits;
+				bally+=yunits;
+				context.fillStyle="black";
+				context.strokeStyle="black";
+				context.strokeRect(0,0,rectWidth,canvas.height);
+				context.beginPath();
+				context.arc(ballx,bally,RADIUS,0,Math.PI*2,true);
+				context.closePath();
+				context.fill();
+		
+				//draw the bar everytime we draw the game board
+				drawBar();
+				
+				//display score
+				displayStatus();
+
+				//draw the bricks
+				reDrawBricks();
+	
+				
+				//ball bouncing off the walls
+				
+			
+				if(ballTouchesBrick())
+				{
+					angle = 360 - angle;
+					updateBall();
+				
+				}
+				else if (ballx-RADIUS < 0 || ballx+RADIUS>rectWidth ) //side walls
+				{
+					angle = 180 - angle;
+					updateBall();
+				}
+				else if(bally-RADIUS< 0)//top wall
+				{
+					angle = 360 - angle;
+					updateBall();
+				
+				}
+				else if(ballTouchesBar())//ball bounce on touching the bar
+				{
+					angle=360-angle;
+					updateBall();
+				
+				}
+				else if(bally>rectWidth)
+				{
+					drawGameOver();
+				}
+			}
+		}
+		function updateBall() 
+		{
+			radians = angle * Math.PI/ 180;
+			xunits = Math.cos(radians) * speed;
+			yunits = Math.sin(radians) * speed;
+		}
+		function drawBar()
+		{
+			context.fillStyle="orange";
+			if(moveRight)
+			{
+				if(barx+BARWIDTH<rectWidth)
+				{
+					barx+=5;
+				}
+			}
+			else if(moveLeft)
+			{
+				if(barx>0)
+				{
+					barx-=5;
+				}
+			}
+			context.fillRect(barx,bary,BARWIDTH,BARHEIGHT);
+		}
+		function drawBricks()
+		{
+			
+			context.strokeStyle="gray";
+			var posx=0;
+			var posy=0;
+			for(var j=0;j<BRICKROWS;j++)
+			{	
+				context.fillStyle=colorCodes[j].color;
+				for(var k=0;k<BRICKCOLUMNS;k++)
+				{
+					context.fillRect(posx,posy,BRICKWIDTH,BRICKHEIGHT);
+					context.strokeRect(posx,posy,BRICKWIDTH,BRICKHEIGHT);
+					bricks.push({x:posx,y:posy,broken:false,color:colorCodes[j].color,points:colorCodes[j].points});					
+					posx+=BRICKWIDTH;
+				}
+				posy+=BRICKHEIGHT;
+				posx=0;
+			}
+		}
+		//event handler for key press
+		function onKeyDown(event)
+		{
+			
+			if(event.keyCode==39)
+			{
+				moveRight=true;
+			}
+			else if(event.keyCode==37)
+			{
+				moveLeft=true;
+			}
+		}
+
+		//event handler for key release
+		function onKeyUp(event)
+		{
+			if(event.keyCode==39)
+			{
+				moveRight=false;
+			}
+			else if(event.keyCode==37)
+			{
+				moveLeft=false;
+			}
+		}
+		
+		//to check if the ball touches the bar
+		function ballTouchesBar()
+		{
+			if((ballx+RADIUS>barx-1)&&(ballx+RADIUS<barx+BARWIDTH+1))
+			{
+				if((bally+RADIUS>bary-1)&&(bally+RADIUS<bary+BARHEIGHT+1))
+				{
+					return true;
+				}
+				else return false;
+			}
+			else return false;
+		} 
+
+		//to check if the ball has broken a brick
+		function ballTouchesBrick()
+		{	
+			var i;
+			for(i=bricks.length-1;i>=0;i--)
+			{
+				if((bally-RADIUS>bricks[i].y)&&(bally-RADIUS<bricks[i].y+BRICKHEIGHT))					
+				{
+					if((ballx+RADIUS>bricks[i].x-1)&&(ballx+RADIUS<bricks[i].x+BRICKWIDTH+1))
+					{
+						if(!bricks[i].broken)
+						{
+							bricks[i].broken=true;
+							gameScore+=bricks[i].points;
+							//return true;
+							break;
+						}
+					}
+						
+							
+				}
+									
+			}
+			if(i>0)return true;
+
+		}
+
+		//to draw the bricks again
+		function reDrawBricks()
+		{
+			context.strokeStyle="gray";
+			for(var i=0;i<bricks.length;i++)
+			{
+				if(!bricks[i].broken)
+				{	
+					context.fillStyle=bricks[i].color;
+					context.fillRect(bricks[i].x,bricks[i].y,BRICKWIDTH,BRICKHEIGHT);
+					context.strokeRect(bricks[i].x,bricks[i].y,BRICKWIDTH,BRICKHEIGHT);	
+				}
+			}
+		}
+
+		//to display when the game is over
+		function drawGameOver()
+		{
+			gameOver=true;
+			context.clearRect(0, 0, canvas.width, canvas.height);
+			context.font = "bold 24px sans-serif";
+			context.fillText("GAME OVER!!",10,canvas.height/2);
+			context.fillText("you scored "+gameScore,10,canvas.height/2+40);
+		}
+	</script>
+</html>
+
